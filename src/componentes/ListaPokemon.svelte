@@ -97,10 +97,8 @@
 </script>
 
 <!-- Tarjeta de Pokémon -->
-<div 
-  class="bg-white shadow-md rounded-lg p-4 text-center cursor-pointer transition transform hover:scale-105 hover:shadow-xl"
-  on:click={fetchDetails}
->
+<div class="bg-white shadow-md rounded-lg p-4 text-center cursor-pointer transition transform hover:scale-105 hover:shadow-xl"
+  on:click={fetchDetails}>
   <img
     src={imageUrl}
     alt={name}
@@ -113,7 +111,7 @@
 {#if $showModal}
   {#await $modalPokemon then pokemon}
     <div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div class="bg-gray-900 text-white p-6 rounded-lg shadow-lg max-w-md w-full relative">
+      <div class="bg-gray-900 text-white p-5 rounded-lg shadow-lg max-w-xl w-full relative">
         <button class="absolute top-2 right-2 text-white hover:text-red-500" on:click={() => showModal.set(false)}>✖</button>
         <h2 class="text-2xl font-bold text-center mb-4">{pokemon.name}</h2>
 

@@ -69,13 +69,13 @@
 
 <main class="min-h-screen bg-gradient-to-br from-red-500 text-white p-4">
   <header class="text-center py-8">
-    <h1 class="text-4xl font-bold">Bienvenido a la Pokédex</h1>
+    <h1 class="text-4xl font-bold title">Bienvenido a la Pokédex</h1>
     <p class="mt-2 text-xl">Explora el mundo de los Pokémon</p>
   </header>
 
   <!-- Menú de botones -->
   <div class="flex justify-center space-x-4 mb-8">
-    <button class="bg-white text-black px-4 py-2 rounded hover:bg-gray-200 transition" on:click={() => activeView = 'pokemon-types'}>
+    <button class="bg-white text-white px-4 py-2 rounded hover:bg-gray-200 transition" on:click={() => activeView = 'pokemon-types'}>
       Ver Pokémon por tipos
     </button>
   </div>
@@ -108,3 +108,9 @@
     </div>
   {/if}
 </main>
+
+<style>
+  .title {
+    font-family: 'Pokemon Solid', sans-serif;
+  }
+</style>
