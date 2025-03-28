@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { Badge } from '../shadcn/badge';
+  import { writable } from 'svelte/store';
 
   export let id;
   export let name = 'Desconocido';
@@ -13,24 +14,66 @@
     steel: 'Acero', fairy: 'Hada'
   };
 
-  let details = {};
-  let types = [];
+  let imageUrl = ''; // Imagen del Pokémon
+
+  // Variables globales para el modal
+  export let modalPokemon = writable(null);
+  export let showModal = writable(false);
+
+  async function loadImage() {
+    if (!id) return;
+    
+    try {
+      const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+      const data = await response.json();
+      imageUrl = data.sprites.other['official-artwork'].front_default || 'https://via.placeholder.com/150';
+    } catch (error) {
+      console.error('Error al cargar la imagen:', error);
+      imageUrl = 'https://via.placeholder.com/150'; // Imagen por defecto en caso de error
+    }
+  }
 
   async function fetchDetails() {
-    if (!id) return; // Evita llamadas innecesarias
+    if (!id) return;
 
     try {
       const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
       const data = await response.json();
-      details = { ...data }; 
-      types = data.types.map((type) => tipoTraducciones[type.type.name] || 'Desconocido');
+      
+      const types = data.types.map((t) => tipoTraducciones[t.type.name] || 'Desconocido');
+      const weaknesses = await fetchWeaknesses(data.types.map(t => t.type.name));
+
+      modalPokemon.set({
+        name,
+        height: data.height / 10,
+        weight: data.weight / 10,
+        types,
+        weaknesses,
+        image: data.sprites.other['official-artwork'].front_default || 'https://via.placeholder.com/150'
+      });
+
+      showModal.set(true);
     } catch (error) {
       console.error('Error al cargar los detalles del Pokémon:', error);
     }
   }
 
-  // Solo se ejecuta cuando cambia `id`
-  $: if (id) fetchDetails();
+  async function fetchWeaknesses(types) {
+    try {
+      let weaknessesSet = new Set();
+      for (let type of types) {
+        const response = await fetch(`https://pokeapi.co/api/v2/type/${type}`);
+        const data = await response.json();
+        data.damage_relations.double_damage_from.forEach(t => {
+          weaknessesSet.add(tipoTraducciones[t.name] || 'Desconocido');
+        });
+      }
+      return Array.from(weaknessesSet);
+    } catch (error) {
+      console.error('Error al obtener debilidades:', error);
+      return [];
+    }
+  }
 
   function getBadgeColor(type) {
     const colors = {
@@ -43,21 +86,66 @@
       Dragón: 'bg-indigo-500 text-white', Siniestro: 'bg-gray-800 text-white',
       Acero: 'bg-gray-500 text-white', Hada: 'bg-pink-300 text-black'
     };
-    return colors[type] || 'bg-gray-300 text-black'; // Si no encuentra el tipo, usa un color por defecto
+    return colors[type] || 'bg-gray-300 text-black';
   }
+
+  // Reactivar la carga de imagen cuando cambie el ID del Pokémon
+  $: id, loadImage();
+
+  // Cargar la imagen del Pokémon al montar el componente
+  onMount(loadImage);
 </script>
 
 <!-- Tarjeta de Pokémon -->
-<div class="bg-white shadow-md rounded-lg p-4 text-center">
+<div 
+  class="bg-white shadow-md rounded-lg p-4 text-center cursor-pointer transition transform hover:scale-105 hover:shadow-xl"
+  on:click={fetchDetails}
+>
   <img
-    src={details.sprites?.other?.['official-artwork']?.front_default || 'https://via.placeholder.com/150'}
+    src={imageUrl}
     alt={name}
     class="w-32 h-32 mx-auto mb-4"
   />
   <h2 class="text-xl font-bold text-gray-800">{name}</h2>
-  <p class="mt-2 text-gray-600 flex justify-center gap-2">
-    {#each types as type}
-      <Badge class={getBadgeColor(type)}>{type}</Badge>
-    {/each}
-  </p>
 </div>
+
+<!-- Modal de Detalles (se maneja globalmente) -->
+{#if $showModal}
+  {#await $modalPokemon then pokemon}
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div class="bg-gray-900 text-white p-6 rounded-lg shadow-lg max-w-md w-full relative">
+        <button class="absolute top-2 right-2 text-white hover:text-red-500" on:click={() => showModal.set(false)}>✖</button>
+        <h2 class="text-2xl font-bold text-center mb-4">{pokemon.name}</h2>
+
+        <img class="w-32 h-32 mx-auto" src={pokemon.image} alt={pokemon.name} />
+
+        <div class="mt-4 text-center">
+          <p><strong>Altura:</strong> {pokemon.height} m</p>
+          <p><strong>Peso:</strong> {pokemon.weight} kg</p>
+        </div>
+
+        <div class="mt-4 text-center">
+          <p><strong>Tipos:</strong></p>
+          <div class="flex justify-center space-x-2">
+            {#each pokemon.types as type}
+              <Badge class={getBadgeColor(type)}>{type}</Badge>
+            {/each}
+          </div>
+        </div>
+
+        <div class="mt-4 text-center">
+          <p><strong>Debilidades:</strong></p>
+          <div class="flex justify-center space-x-2">
+            {#each pokemon.weaknesses as weakness}
+              <Badge class={getBadgeColor(weakness)}>{weakness}</Badge>
+            {/each}
+          </div>
+        </div>
+
+        <button class="mt-4 w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition" on:click={() => showModal.set(false)}>
+          Cerrar
+        </button>
+      </div>
+    </div>
+  {/await}
+{/if}
